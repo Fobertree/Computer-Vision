@@ -1,0 +1,392 @@
+File Descriptors
+\begin{itemize}
+    \item The UBLOCK contains a file descriptor table
+    \begin{itemize}
+        \item A file descriptor: data structure that describes the ``state" of an ``open" file. Three pieces of information
+        \begin{itemize}
+            \item The inode of the file
+            \item The current offset in the file (location inside the file)
+            \item An open flag describing what operations can be performed
+        \end{itemize}
+        \item File descriptor table is an array, and each file descriptor can be referenced by its index in that array. Programs treat file descriptors as this small integer
+    \end{itemize}
+    \item Two system calls that take a pathname and return a file descriptor
+    \begin{itemize}
+        \item `Creat' which creates a new file and opens it
+        \item `Open' which can open an existing file (or create a new one)
+    \end{itemize}
+    \item Note: file suffixes don't mean anything here
+\end{itemize}
+Standard I/O FD's
+\begin{itemize}
+    \item By convention, 3 special file descriptors 0,1,2
+    \begin{itemize}
+        \item 0 is standard input
+        \item 1 is standard output
+        \item 2 is the standard error
+    \end{itemize}
+    \item This is just a (default) convention. No syscalls needed for this, since these file descriptors are automatically assigned (normally by programs based on this convention). Can be arranged by a parent process if the program doesn't identify a source for I/O
+    \item When the parent is the shell they are either the terminal is using or redirected with $>, <$
+\end{itemize}
+\textbf{There are 2 system calls that take a pathname and return a file descriptor}
+\begin{itemize}
+    \item Creat: creates new file and opens it
+    \item Open which can open an existing one (or create new one, so Open can so both)
+\end{itemize}
+\subsection{Creat}
+\begin{itemize}
+    \item int creat(const char *path\_name, mode\_t mode);
+    \begin{itemize}
+        \item Creates a file with the pathname
+        \item Mode is the permission, for example 0644, read/write for owner, read only for group and others
+    \end{itemize}
+    \item If the file already exists it truncates
+    \item Returns a fd, or -1 (error code)
+    \begin{itemize}
+        \item Sets errno on -1 to a code documented in the man page
+    \end{itemize}
+    \item Note: Every syscall returns -1 as error code
+\end{itemize}
+\textbf{Multiple ways Creat can fail}
+\begin{itemize}
+    \item If file found at path, tries to recycle same inode (and perms) and empty the file. However, if there are no write perms, then returns Permission denied
+    \begin{itemize}
+        \item File exists, don't have write permission for file
+    \end{itemize}
+    \item Trying to create file in root directory (which only has read and execute)
+    \begin{itemize}
+        \item File doesn't exist, but don't have write permission for folder (EACCESS)
+    \end{itemize}
+    \item Others can be found on man page
+\end{itemize}
+
+\subsection{Open (2 args)}
+int open (const char *pathname, int flags);
+\begin{itemize}
+    \item The dual of ``creat", it just opens existing files
+    \item Flags is the open flag stored in the inode
+    \begin{itemize}
+        \item 0 read only
+        \item 1 write only
+        \item 2 read and write
+    \end{itemize}
+\end{itemize}
+\subsubsection{Open (3 args)}
+int open(const char *pathname,int flags, mode\_t mode)
+\begin{itemize}
+    \item Can both create new files and open existing ones
+    \item Mode is the same as in creat, if it creates a new file. Otherwise it just uses the existing mode
+    \item Flags now have many symbolic options for bits in the flag that set corresponding bits in the Open Flag in the inode
+    \begin{itemize}
+        \item O\_RDONLY, O\_WRONLY, O\_RDWR are the same as 0, 1, 2
+        \item O\_CREAT (create a new file if it doesn't exist)
+        \item O\_TRUNC (truncate the file)
+        \item We will come across many other flags like O\_NONBLOCK, O\_SYNC (wait until data gets on the disk, normally goes via buffer cache async first, which slows things since we're writing at disk speeds)
+        \item Bits can be ORed together: O\_WRONLY$\mid$O\_TRUNC$\mid$O\_CREATE same as creat system call
+    \end{itemize}
+\end{itemize}
+
+\subsection{Read and Write}
+ssize\_t read( int fd, void *buf, size\_t count)\\
+ssize\_t write(int fd, const void *buf, size\_t count)
+\begin{itemize}
+    \item Reads (or Writes) from (or to) the file with file descriptor fd, to (or from) the buf in the process address space
+    \item Count is the size of buf, and the number of bytes requested to be read or written
+    \item Return value is number of bytes actually read or written
+    \begin{itemize}
+        \item A return value of -1 for errno has a code
+        \item Returns 0 on Read: no more bytes availble in file
+    \end{itemize}
+    \item Each read or write advances the location in the file by the amount read or written
+    \item WARNING: the signature (void * buf) describes a pointer, which has to point to allocated storage (array of malloc'd dynamically)
+    \item The OS has no knowledge of what buf is, it's just getting an address. If you give it a bad address, or an address with no enough space for the ``count" it will just try and overwrite whatever is there for count bytes
+    \item Like all syscalls Reads and Writes do a \textbf{context switch} into the OS. Doing many small Reads and/or Writes are expensive since the cost of a context switch dominates the small amount of work accomplished. \textbf{Note: every syscall requires a context switch}
+\end{itemize}
+Real, user, sys time (time program in shell)
+\begin{itemize}
+    \item Real: total time
+    \item Time inside program itself (just the code)
+    \item Sys: how much time OS spent getting the data
+\end{itemize}
+Remember the buffer cache: inherently involved in disk I/O for Block devices
+\begin{itemize}
+    \item Note: not used for character device (DMA)
+\end{itemize}
+lseek
+\begin{itemize}
+    \item Recall that internally a file descriptor has 3 components, an inode reference, an open flag, and an offset. First two have already been discussed
+    \item Offset tells the read or write syscall where in the file to operate next, its the byte count from the beginning of the file
+    \item Offset is advanced as part of the read or write syscall by the amount of data read or written
+    \item lseek is a syscall that alters offset in the file descriptor
+    \item off\_t lseek(int fd, off\_t offset, int whence);
+    \begin{itemize}
+        \item whence is one of SEEK\_SET, SEEK\_CUR (offset from you are now in file), SEEK\_END (same but relative to end of file)
+        \item The return value is the new offset (or -1 and errno is set)
+    \end{itemize}
+\end{itemize}
+Misc file syscalls
+\begin{itemize}
+    \item pread
+    \item pwrite
+    \begin{itemize}
+        \item Read and write using specified offset (and not changing the offset in the file descriptor)
+        \item These together with lseek allow random access to file contents
+    \end{itemize}
+    \item readv
+    \item writev
+    \begin{itemize}
+        \item struct iovec \{ \\void *iov\_base; /* Starting address*/\\size\_t iov\_len; /* Number of bytes to transfer */ \\\}
+        \item Write/read multiple nonconsecutive intervals
+        \item This allows implementation of scatter (write)/gather (read)
+    \end{itemize}
+\end{itemize}
+\subsection{Metadata of File with Mode}
+\begin{itemize}
+    \item Right 9 bits are permissions  (RWX, owner, group, user)
+    \begin{itemize}
+        \item Affect permissions for ACCESS Prog and Database
+    \end{itemize}
+    \item Left 4 bits are the ``type". Single bit types are marked (ORD, DIR, CHAR, FIFO). Combinations to allow 16 types (e.g. BLOCK = CHAR | ORD)
+    \item There are two userid in the UBLOCK, UID and EUID. Initially the same as login ID. EUID is used to validating permissions
+    \item If SUID bit is set a process running the executable file will have its EUID take on the owner id of the file. SGID similar for groups
+    \item STICKY bit
+    \begin{itemize}
+        \item Used differently based on type of file
+        \item For ordinary files, slow to run on OS
+        \item Sticky bit says, "if no nobody is using this program and there is memory, leave it in memory (don't dump it out) i.e. don't delete it". It is a suggestion/warning to OS that the program is popular and program should be left in memory if there is room
+    \end{itemize}
+\end{itemize}
+\subsection{Stat Syscall}
+\begin{itemize}
+    \item int stat (const char* pathname, struct stat* statbuf);
+    \item struct stat has all the metadata about a file
+    \item struct timespec st\_atim; // Time of last access
+    \item struct timespeect st\_mtim; // Time of last modification
+    \item struct timespec st\_ctim; // Time of last status change
+    \item Variants of stat syscall
+    \begin{itemize}
+        \item fstat (open file): for meta information on open file
+        \item lstat (symbolic links): follows symbolic link and gives metadata on the file
+        \item Note: cannot modify metadata with stat. We do so with chmod
+    \end{itemize}
+\end{itemize}
+Modifying Metadata
+\begin{itemize}
+    \item int chmod(const char *pathname, mode\_t mode);
+    \item int chown(const char *pathname, uid\_t owner, gid\_t group);
+    \begin{itemize}
+        \item Modify ownership permissions (file owner/group)
+    \end{itemize}
+    \item int utime (const char *filename, const struuct utimbuf *times);
+    \begin{itemize}
+        \item utimbuf is a struct with access time and modification time
+        \begin{itemize}
+            \item actime, modtime
+        \end{itemize}
+        \item Can change these times
+        \item Why do this? Good for archiving programs
+        \begin{itemize}
+            \item For ex, zipping and unzipping files (restore time to when it was archived, NOT when it was extracted)
+        \end{itemize}
+        \item Utime cannot change the ctime. It can only change actime, modtime
+    \end{itemize}
+\end{itemize}
+\section{Reading Directories}
+Although Directories are a file, their internal format is not portable (lot of variations in how directories are set up in OS, e.g. character set/language, length of path name, upper/lower case, etc.). So libc/POSIX supplies a portable API
+\begin{itemize}
+    \item DIR *opendir(const char *name);
+    \begin{itemize}
+        \item This creates a directory stream, DIR is an opaque cookie efor referencing the stream
+        \item Returns NULL on error and set errno
+        \item It uses a struct `dirent' (directory entry), Only portable fiels are
+        \begin{itemize}
+            \item ino\_t d\_ino; // Inode number
+            \item char d\_name[256]; // Null-terminated filename
+        \end{itemize}
+        \item struct dirent *readdir(DIR *dirp);
+        \begin{itemize}
+            \item Returns NULL at end of directory. errno distinguishes an error
+        \end{itemize}
+        \item int closedir(DIR *dirp);
+        \begin{itemize}
+            \item close dir when done
+        \end{itemize}
+    \end{itemize}
+\end{itemize}
+
+\section{Other Notes}
+\textbf{TWO THINGS HAPPEN WHEN SYSCALL FAILS}
+\begin{itemize}
+    \item returns -1
+    \item Changes ERRNO constant
+\end{itemize}
+Chmod: changes permission
+
+use myar to create archive, ar to access it (and vice-versa?)
+\begin{itemize}
+    \item Flags -qU (save metadata with -U flag)
+    \item ar -qU arch fileone
+    \item Metadata always starts on even boundary?
+    \item ar -x arch fileone
+    \item -x flag restores file from archive
+    \item Our file should create ar\_hdr
+    \item Check /usr/include/ar.h (cat it)
+    \item Each file adds ar\_hdr struct first, then file contents
+    \item lseek (VERY IMPORTANT) go to end of file. lseek 0 bytes from the end
+\end{itemize}
+Chdir (2) changes cwd to target directory
+
+https://sites.uclouvain.be/SystInfo/usr/include/ar.h.html
+
+https://man7.org/linux/man-pages/man1/ar.1.html
+
+size and mode are binary integers in struct meta???
+
+bg command
+
+\subsection{Synchronized vs Synchronous}
+Synchronized: Syscall blocks until I/O is complete
+\begin{itemize}
+    \item When Write returns it means the data is on the media (e.g. Disk)
+    \item UNSynchronous means the data has been copied from the user buffer but may only have gotten as far as the Buffer Cache
+    \item UNSynchronized is the default
+    \item Synchronous: The Syscall blocks according to the Synchronized/UNsynchronized setting
+    \begin{itemize}
+        \item Asynchronous means that the system call blocks only until the I/O is initiated
+        \begin{itemize}
+            \item On Write, the data may not have been copied from user buffer
+            \item On Read, data may not have arrived yet in user buffer
+        \end{itemize}
+        \item Synchronous is the default
+        \item SUMMARY: Default Synchronous and UNSynchronous
+    \end{itemize}
+\end{itemize}
+Double Buffering
+\begin{itemize}
+    \item One approach to get more out of CPU
+    \item Fill 1 buffer, fire async call for it to be processed then concurrently push to the second buffer
+\end{itemize}
+Changing UNSynchronized behavior
+\begin{itemize}
+    \item There are two basic ways
+    \item Use Open Flag O\_SYNC
+    \begin{itemize}
+        \item Makes every write synchronized, very slow
+        \item Besides specifying it at open() time, the Open Flag can also be changed while the file is open
+        \begin{itemize}
+            \item Eg: fcntl(fd, F\_SETFL, O\_WRONLY | O\_SYNC)
+            \item Family of cntl syscalls that allow some sort of modification
+        \end{itemize}
+    \end{itemize}
+    \item int fsync( int fd);
+    \begin{itemize}
+        \item Blocks until previous I/O is on the media (writing completes of file descriptor)
+    \end{itemize}
+    \item O\_DSYNC and fdatasync(int fd) are variations that only block on writing data, not the metadata update
+    \item Asynchronous I/O requires a different paradigm
+\end{itemize}
+Asynchronous I/O
+\begin{itemize}
+    \item In this mode reading and writing are ``queued" when initiated and return before any transfer occurs
+    \item Makes sense if program has something else to do while transfer occurs
+    \item An AIO (async io) Control Block is used
+    \item sigevent is a struct under aiocb that specifies a notification method (way for OS to signal (via SIGNAL or value) that async request has been completed)
+    item opcode: if we are going to do read or write
+\end{itemize}
+Async Operation Syscalls
+\begin{itemize}
+    \item int aio\_read(struct aiocb *aiocbp);
+    \item int aio\_write(struct aiocb *aiocbp);
+    \item aio\_error(const struct aiocb *aiocbp);
+    \begin{itemize}
+        \item Return values: EINPROGRESS, ECANCELED, 0 (success)
+    \end{itemize}
+    \item Often used with double buffering (queue output on one buffer, and prep second, then switch buffers) and event programming (using signals)
+\end{itemize}
+Mandelburg skipped reading directories?
+\subsection{File Descriptor Architecture}
+Triple: inode number, I/O flag, offset. file descriptor ublock referred to by index
+\begin{itemize}
+    \item However, this isnn't fully right. File descriptors in a process UBLOCK do not really have (Inode, Flag, Offset). They are actually just pointers to a table shared by all processes, called the Open File Table
+    \begin{itemize}
+        \item This allows two processes to share a file descriptor
+        \item That means they not only use the same file, but are updating the same offset
+    \end{itemize}
+    \item Open File Table itself does NOT contain the Inode, since more than one process can be using the same file with different file descriptors, independently
+    \item The OS has a cache of Inodes (Inode cache and Open File Table are in BSS of OS) that are in use, ``In Memory Inodes", and the Open File Tables points here
+    \item FD Tables in program U-BLOCKS (user structure) do NOT actually contain FD triples (they indirectly point to it). They are pointers to Open File Table, which actually contains the triples
+    \item the I* in Open File Table is NOT actually the inode since multiple multiple I* can point to the same Inode, which is actually stored in Kernel BSS
+    \item Count, in both Open File Table, and In Memory Inodes, (non-formally) indicates arrows pointing to it/in-degree
+\end{itemize}
+Buffered I/O
+\begin{itemize}
+    \item Run at buffer speeds and NOT disk speeds is huge
+    \item Even though Buffer cache saves teh cost of doing small I/O reads and writes to the disk, it doesn't reduce the cost of context switches for small read and write syscalls to the Buffer Cache
+    \item The `business logic' of many programs do not naturally lend themselves to doing large reads and writes to minimize the context switch overhead
+\end{itemize}
+More Buffered I/O
+\begin{itemize}
+    \item Done by using a buffered I/O library
+    \item Strategy: have user API write to a library buffer in the users address space, that accumulates the small writes, and does a single large write system call when its buffer is full
+    \item On reaching end of buffer, issue write syscall. This reduces number of syscalls
+    \item Strategy works in reverse for reads. The library fills its buffer (in BSS) with a single large read system call, and gives it to the user API as requested. When the buffer is empty, it does another large read system call
+    \item Most of the user read/write API is very fast since it is only moving data around in the address space. It runs at memory speed, not at disk speed
+    \item putc, getc
+\end{itemize}
+Stdio Buffered I/O
+\begin{itemize}
+    \item Libc provides a set of stdio buffered I/O routine
+    \item Uses a data structure ``FILE" which is an abstraction of a fd, for an I/O stream. Although it is opaque to the API, in actuality it contains:
+    \begin{itemize}
+        \item Actual ``fd" to do the system call I/O
+        \item Buffer appropriately sized to the ``type" of file (ordinary, device, etc.)
+        \item A ptr into the buffer for the next space for the API to get or put the next byte to satisfy the request
+        \item A count of how much data (or room) is left in the buffer
+        \item A flag that has info on the mode
+    \end{itemize}
+\end{itemize}
+Special Streams
+\begin{itemize}
+    \item Recall the convention that programs that don't open their own files use file descriptors 0,1,2 inherited from their parent. These are called standard input, output, and error
+    \begin{itemize}
+        \item If the parent is the shell, $<, >, 2>$ can be used on the command line to redirect these file descriptors for the child
+        \item The standard I/O library, provides three FILEs (streams) that don't need to be fopen'ed. They are associated with special file descriptors 0,1,2 and named ``stdin", ``stdout", and ``stderr"
+        \begin{itemize}
+            \item You have already used ``fprintf(stderr, ...). fprintf can be used with any stream, and in fact printf is really ``fprintf(stdout,..)"
+        \end{itemize}
+        \item \textbf{putc, and getc are equivalent to fputc and fgetc but may be macros} (faster, no overhead of getting in or out of function via stack frame)
+        \item Putchar, getchar ar putc, getc to/from stdout and stdin
+    \end{itemize}
+\end{itemize}
+FILE *fopen(const char *pathname, const char *mode);\\
+FILE *fdopen(int fd, const char *mode)
+\begin{itemize}
+    \item Same as fopen, but uses fd instead
+    \item Unlike open, the mode is string
+\end{itemize}
+int fputc
+\begin{itemize}
+    \item 
+\end{itemize}
+int fputs
+\begin{itemize}
+    \item 
+\end{itemize}
+int fgetc
+\begin{itemize}
+    \item 
+\end{itemize}
+char *fgets
+\begin{itemize}
+    \item 
+\end{itemize}
+size\t fread
+\begin{itemize}
+    \item Number of blocks of size size
+\end{itemize}
+size\_t fwrite
+\\
+Buffer cache saves cost of doing small I/O reads/writes to disk, but doesn't reduce cost of context switches for small read and write system calls to the Buffer Cache
+\begin{itemize}
+    \item Remember, buffered I/O has the library buf in the BSS
+\end{itemize}

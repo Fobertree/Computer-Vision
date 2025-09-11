@@ -1,0 +1,106 @@
+What makes this different from edges?
+\begin{itemize}
+    \item Edge only give parts where pixels change rapidly, but lines give us structure
+\end{itemize}
+Fitting as Search in Parametric Space
+\begin{itemize}
+    \item Parametric model for a set of features
+    \item Computational complexity matters
+\end{itemize}
+Difficulty of line fitting
+\begin{itemize}
+    \item Edge point clutter
+    \item Only some parts of line detected, some fitting
+    \item Noise in measured edge points
+    \begin{itemize}
+        \item How to detect true underlying parameters?
+    \end{itemize}
+\end{itemize}
+\subsection{RANSAC}
+Overview
+\begin{itemize}
+    \item RANdom SAmple Consensus
+    \item Approach: Avoid impact of outliers
+    \item Iteratively maximize number of inlines
+    \begin{itemize}
+        \item Least-squares
+    \end{itemize}
+\end{itemize}
+Task: Estimate the best line\\
+RANSAC stage (k iterations)
+\begin{itemize}
+    \item Randomly pick 2 points, create a line from the two points
+    \item Find total number of points within a (distance) threshold of line (inlier points)
+    \item Repeat, until we get a good result
+\end{itemize}
+Refinement stage (repeat until the inliner set is stable)
+\begin{itemize}
+    \item Take all inliners of the best line
+    \item Fit a new line using least squares (linear regression)
+    \item Re-check which points are inliners
+    \item Keep doing this until inliner set is stable (number of inliner points doesn't change, i.e. size of set remains the same)
+\end{itemize}
+Pros
+\begin{itemize}
+    \item General method suited for a wide range of model fitting problesm
+    \item Easy to implement
+\end{itemize}
+Cons
+\begin{itemize}
+    \item Only handles a moderate number of outliers before cost blowing up
+    \item Many problems have high rates of outliers
+\end{itemize}
+
+\subsection{Hough Transform}
+Hough transform can detect lines, circles, and structures ONLY if their parametric equations are known\vspace{0.15in}\\
+Naive line detection
+\begin{itemize}
+    \item For every pair of edge pixels
+    \begin{itemize}
+        \item Compute equation of line
+        \item Check if other pixels satisfy equation
+        \item $O(N^2)$ for $N$ edge pixels. Too expensive
+    \end{itemize}
+\end{itemize}
+Idea
+\begin{itemize}
+    \item Take one edge point $(x_i,y_i)$
+    \begin{itemize}
+        \item Many potential lines passing through point
+        \item Family of lines has form $y_i = a*x_i +b$
+    \end{itemize}
+    \item Original $(x,y)$ space is in image space
+    \[y=a_i*x+b_i\]
+    \item $a,b$ values get mapped to ``parameter space" $(a,b)$
+    \begin{itemize}
+        \item Since $a,b$ are inversely proportional, $(a_1,b_1)$ and $(a_2,b_2)$ produce negative sloping line: $b=-x_i * a + y_i$
+        \[b=-x_i*a+y_i\]
+        \begin{itemize}
+            \item \textbf{Proof for this:} subtract $a_i * x$ from both sides
+        \end{itemize}
+        \item All the feasible combinations of $(a,b)$ are on the same line in the parameter space
+        \item Note that since $x_i$ and $y_i$ are our new fixed constants (our $m$ and $b$ in $y=mx+b$) each point $(x_i,y_i)$ produces a new line in parameter space
+    \end{itemize}
+\end{itemize}
+Detecting lines using Hough transform
+\begin{itemize}
+    \item Each point produces a new line in the parameter space
+    \item The intersection of the lines in the parameter space provide $(a^\prime,b^\prime)$, which forms the line $y=a^\prime*x + b^\prime$, which represents the equation in the original image space that connects the two points
+    \begin{itemize}
+        \item Proof also by algebra, in moving $ax$ term
+    \end{itemize}
+    \item Convert parameter space into discretized cells in a grid
+    \begin{itemize}
+        \item We vote on the discrete cells that are `activated' by the transformed line in $(a^\prime, b^\prime)$. Increment cells it is passing through by $1$
+        \item Find cells with more votes than threshold
+        \begin{itemize}
+            \item Intuitively, finding lines that correspond to the most edge points
+        \end{itemize}
+    \end{itemize}
+    \item Complexity
+    \begin{itemize}
+        \item Linear on number of edge points $N$
+        \item Linear on number of accumulator cells $M$
+        \item $O(N\times M)$
+    \end{itemize}
+\end{itemize}

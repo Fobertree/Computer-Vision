@@ -1,0 +1,217 @@
+Recall convolution:
+\[f[n,m]*h[n,m] = \sum_k\sum_l f[k,l]\cdot h[n-k,m-l]\]
+Flip kernel first. Why?
+\begin{itemize}
+    \item Associativity
+    \item Following definition of convolution. Otherwise, it is cross-correlation
+\end{itemize}
+\subsection{Correlation}
+Cross correlation is convolution but WITHOUT the flip
+\begin{itemize}
+    \item Slide template over sample image with noisy filter applied. Use numpy's correlate to find specific values
+    \item Applying an initial filter to keep values above certain level, does a better job at distinguishing values
+\end{itemize}
+Why correlation peaks at a match?
+\begin{itemize}
+    \item Correlation = multiply template with image patch, then sum
+    \item Mismatch $\to$ products cancel out $\to$ small score
+    \item Good match $\to$ products reinforce, high sum
+    \item Highest sum when template aligns with image (similarity score)
+\end{itemize}
+Convolution is a filtering operation, correlation is a measure of relatedness of two signals\vspace{0.15in}\\
+\subsection{Edge detection}
+Origin of edges (4 main sources)
+\begin{itemize}
+    \item Surface normal discontuinity
+    \begin{itemize}
+        \item surface normal-facing direction changes
+    \end{itemize}
+    \item Depth discontuinity
+    \begin{itemize}
+        \item Foreground vs background (depth)
+    \end{itemize}
+    \item Surface color discontinuity
+    \begin{itemize}
+        \item Diff. color
+    \end{itemize}
+    \item Illumination discontinuity
+    \begin{itemize}
+        \item Lights
+    \end{itemize}
+\end{itemize}
+Finite differences in 1D (derivative)
+\begin{itemize}
+    \item Backward
+    \item Forward
+    \item Central
+\end{itemize}
+We can use these finite differences to create filters
+\begin{itemize}
+    \item Backward filter: $f(x)-f(x-1)=f^\prime(x)$
+    \begin{itemize}
+        \item $[0,1,-1]$
+    \end{itemize}
+    \item Forward filter: $f(x+1)-f(x)=f^\prime(x)$
+    \begin{itemize}
+        \item $[1,-1,0]$
+    \end{itemize}
+    \item Central filter: $f(x+1)-f(x-1) = f^\prime(x)$
+    \begin{itemize}
+        \item $[1,0,-1]$
+    \end{itemize}
+    \item Leading positive term is assigned $+1$, negative term is assigned $-1$, what isn't being used is assigned $0$
+    \item $[sign(x-1), sign(x), sign(x+1)]$, then flip kernel by convolution definition
+\end{itemize}
+Discrete derivatives in 2D
+\begin{itemize}
+    \item Gradient
+    \begin{itemize}
+        \item $\nabla f(x,y) = [f_x, f_y]^T$
+        \item gradient magnitude: $\left | \nabla f(x,y)\right | = \sqrt{f_x^2+f_y^2}$
+        \item Gradient direction: $\theta = \tan^{-1}\left(\frac{f_y}{f_x}\right)$
+    \end{itemize}
+\end{itemize}
+What does this filter do?
+\[\frac{1}{3}\begin{bmatrix}
+    1&0&-1\\
+    1&0&-1\\
+    1&0&-1
+\end{bmatrix}\]
+\begin{itemize}
+    \item x-derivative filter, highlights vertical edges
+    \item Transposed version highlights horizontal edges
+\end{itemize}
+Simple edge detector
+An edge is a place of rapid change in the image intensity function\vspace{0.15in}\\
+Gradient of an image: $\nabla f = [f_x, f_y]$
+\begin{itemize}
+    \item Recall: gradient vector points in direction of greatest increase
+    \item Edge strength is given by the gradient magnitude
+    \begin{itemize}
+        \item $\|\nabla f\| = \sqrt{f_x^2+f_y^2}$
+    \end{itemize}
+\end{itemize}
+Effects of noise
+\begin{itemize}
+    \item Problem: discrete gradient filters respond strongly to noise
+    \item What can be done?
+    \begin{itemize}
+        \item Smooth the image before taking the image, apply smoothing filter to make pixels look more like neighbors
+    \end{itemize}
+    \item Smoothing filters
+    \begin{itemize}
+        \item Mean smoothing
+        \item Gaussian smoothing
+    \end{itemize}
+\end{itemize}
+Derivative theorem of convolution
+\[\frac{d}{dx}(f * g) = f * \frac{d}{dx}g\]
+\begin{itemize}
+    \item Can pre-compute/take derivative of Gaussian filter
+\end{itemize}
+Tradeoff between smoothing and localization
+\begin{itemize}
+    \item Stronger smoothing removes noise, but blurs edges
+    \begin{itemize}
+        \item Increase kernel size, removes noise, but blurs edges and vice-versa
+    \end{itemize}
+\end{itemize}
+Designing an edge detector
+\begin{itemize}
+    \item Criteria for an "optimal" edge detector
+    \begin{itemize}
+        \item Good detection: minimize probability of false positives (i.e., detecting spurious noise as an edge)
+        \item Good localization: detected edges must be as close as possible to actual edge
+        \item Single response: one point for each true edge point (one-to-one)
+    \end{itemize}
+\end{itemize}
+\subsection{Sobel Edge Detector}
+\begin{itemize}
+    \item Uses two 3x3 kernels (one horizontal, one vertical) which are convolved with original image
+    \[G_x = \begin{bmatrix}
+        +1&0&-1\\
+        +2&0&-2\\
+        +1&0&-1
+    \end{bmatrix}\]
+    \[G_y = \begin{bmatrix}
+        +1&+2&-1\\
+        0&0&0\\
+        -1&-2&-1
+    \end{bmatrix}\]
+\end{itemize}
+Magnitude:
+\[\sqrt{G_x^2 + G_y^2}\]
+Sobel Filter Problems
+\begin{itemize}
+    \item Poor localization (can trigger response in multiple adjacent pixels (thick edges)
+    \item Thresholding value favors certain directions over others
+    \begin{itemize}
+        \item Can miss diagonal directions
+        \item This means risk of false negatives
+    \end{itemize}
+\end{itemize}
+Sobel filters are derived form the derivative
+\[G_x = \begin{bmatrix}
+    +1&0&-1\\
+    +1&0&-1\\
+    +1&0&-1\\
+\end{bmatrix} = \begin{bmatrix}
+    1\\2\\1
+\end{bmatrix}\begin{bmatrix}
+    +1&0&1
+\end{bmatrix}\]
+\begin{itemize}
+    \item First vector: Gaussian smoothing
+    \item Second vector: derivative
+\end{itemize}
+
+\subsection{Canny edge detector}
+Steps
+\begin{itemize}
+    \item Suppress Noise
+    \item Compute gradient magnitude and direction
+    \item Apply Non-Maximum Suppression
+    \item Use hysteresis and connectivity analysis to detect edges
+\end{itemize}
+Pre-compute derivative of Gaussian filter 
+\begin{itemize}
+    \item These turn out to be Sobel filters
+    \item $\theta = \tan^{-1}\left(\frac{f_y}{f_x}\right)$
+\end{itemize}
+To make detected edges thinner, apply non-maximum suppression
+\begin{itemize}
+    \item Key principle: edge should occur where gradient reaches a maxima
+    \item Compare current pixel vs neighbors along direction of gradient
+    \begin{itemize}
+        \item Remove if not maximum (even if it passes threshold)
+    \end{itemize}
+\end{itemize}
+Non-maximum suppression formalized:
+\[M(x,y) = \begin{cases}
+    |\nabla G|(x,y) \text{ if } |\nabla G|(x,y) > |\nabla G|(x^\prime,y^\prime) \& |\nabla G|(x,y) > |\nabla G|(x^{\prime\prime},y^{\prime\prime})\\
+    0 \text{ otherwise}
+\end{cases}\]
+\begin{itemize}
+    \item Where $|\nabla G|(x,y)$ is the magnitude at point $(x,y)$ and $(x,y), (x^\prime,y^\prime), (x^{\prime\prime}, y^{\prime\prime})$ lie along gradient direction (normal to edge)
+\end{itemize}
+Detecting edges with a single threshold
+\begin{itemize}
+    \item Flawed, use two thresholds
+\end{itemize}
+Hysteresis thresholding
+\begin{itemize}
+    \item Avoid streaking near threshold value
+    \item Define two thresholds: low and high
+    \item If less than low, not an edge
+    \item If greater than high, a strong edge
+    \item If below low and high, weak edge
+    \begin{itemize}
+        \item Consider adjacent pixels and check if they are edge pixels. If there is one, declare it an edge pixel
+    \end{itemize}
+\end{itemize}
+Effect of $\sigma$ (Gaussian kernel spread/size)
+\begin{itemize}
+    \item Can affect coarseness of edges
+    \item Large $\sigma$: detect large scale edges
+    \item Small $\sigma$: detect fine features
+\end{itemize}

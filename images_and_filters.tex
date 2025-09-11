@@ -1,0 +1,83 @@
+Shorter wavelengths: violet. Longer wavelengths: Red
+
+Photons
+\begin{itemize}
+    \item Absorption
+    \item Diffusion
+    \begin{itemize}
+        \item Randomized reflection vectors
+    \end{itemize}
+    \item Specular reflation
+    \begin{itemize}
+        \item Single ray
+    \end{itemize}
+    \item Transparency
+    \item Refraction
+    \item Fluorescence
+    \item Subsurface scattering
+    \begin{itemize}
+        \item Diffuse below the surface (can see effect as light going through human skin)
+    \end{itemize}
+    \item Phosphorescence
+    \item Interreflection
+\end{itemize}
+BRDF (bidirectional reflectance distribution function)
+\begin{itemize}
+    \item Describes how light reflects off a surface
+\end{itemize}
+Rods
+\begin{itemize}
+    \item rod-shapes
+    \item more sensitive
+    \item gray-scale
+\end{itemize}
+Cones
+\begin{itemize}
+    \item Detects color
+    \item Three types
+    \begin{itemize}
+        \item S-: blue
+        \item M-: green/yellow
+        \item L-: red light
+    \end{itemize}
+\end{itemize}
+Three types of images
+\begin{itemize}
+    \item Binary: 0/1
+    \item Grayscale: 0-255
+    \item Color: RGB
+\end{itemize}
+Resolution
+\begin{itemize}
+    \item sampling parameter, in dots per inch (DPI)
+\end{itemize}
+Images are Sampled and Quantized
+\begin{itemize}
+    \item Quantized: constrain values to range (in this case [0,255])
+\end{itemize}
+\subsection{Onto Core Content: Filters}
+Filtering
+\begin{itemize}
+    \item Forming a new image whose pixel values are transformed from original pixel values
+    \item Ex:
+    \begin{itemize}
+        \item De-noising
+        \item Super-resolution
+        \item In-painting
+    \end{itemize}
+\end{itemize}
+\subsubsection{2D Convolution}
+Filtering operation between kernel $f$ and $h$
+\begin{itemize}
+    \item Flipping kernel $h$ (both horizontally and vertically), then slide it over image $f$, multiplying overlapping elements, and summing
+    \begin{itemize}
+        \item Why does it flip?
+        \item Something to do with associativity
+    \end{itemize}
+    \item Steps
+    \begin{itemize}
+        \item Flip h vertically. Flip h horizontally
+        \item Shift flipped results by $n,m$ to form $h[n-k,m-l]$
+    \end{itemize}
+    \item Note: zero-padding to preserve dimensions, otherwise decrease dims by 2 or stride
+\end{itemize}

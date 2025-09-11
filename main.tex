@@ -1,0 +1,59 @@
+\documentclass[10pt, oneside]{article} 
+\usepackage{amsmath, amsthm, amssymb, calrsfs, wasysym, verbatim, bbm, color, graphics, geometry, color, mathtools}
+
+\geometry{tmargin=.75in, bmargin=.75in, lmargin=.75in, rmargin = .75in}  
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\F}{\mathbb{F}}
+\newcommand{\I}{\mathcal{I}}
+\newcommand{\Cdot}{\boldsymbol{\cdot}}
+\newcommand{\inc}{\Delta}
+\newcommand\norm[1]{\lVert#1\rVert}
+\newcommand\normx[1]{\Vert#1\Vert}
+
+% fix for mathptmx screwing up mathcal
+\DeclareMathAlphabet{\mathcal}{OMS}{cmsy}{m}{n}
+
+\newtheorem{thm}{Theorem}
+\newtheorem{defn}{Definition}
+\newtheorem{conv}{Convention}
+\newtheorem{rem}{Remark}
+\newtheorem{lem}{Lemma}
+\newtheorem{cor}{Corollary}
+\newcommand{\highlight}[1]{%
+\colorbox{red!50}{$\displaystyle#1$}}
+
+\usepackage[hidelinks]{hyperref}
+
+\title{CS 485 - Computer Vision}
+\author{Alexander Liu}
+\date{Fall 2025}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+\vspace{.25in}
+\newpage
+
+\section{Introduction}
+\input{intro}
+
+\section{Images and Filters}
+\input{images_and_filters}
+
+\section{Filters and Edges}
+\input{filters_and_edges}
+
+\section{Line Detection}
+\input{line_detection}
+
+%%%FOOTER
+\input{footer}
+
+\end{document}
