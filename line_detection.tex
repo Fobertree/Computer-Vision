@@ -104,3 +104,210 @@ Detecting lines using Hough transform
         \item $O(N\times M)$
     \end{itemize}
 \end{itemize}
+
+\subsection{Local Invariant Features}
+It can be difficult to find matching images, depending on angle, color hue, shadows, etc.
+\begin{itemize}
+    \item However, if we can find local features to identify a local appearance, we can match regions across different images
+    \item Ex: NASA Mars Rover with SIFT feature matching
+\end{itemize}
+Motivation for using local features
+\begin{itemize}
+    \item Global representations have major limitations
+    \item Increased robustness to occulusions
+    \begin{itemize}
+        \item Occlusions
+        \begin{itemize}
+            \item Book covering half of face
+        \end{itemize}
+        \item Articulation
+        \item Intra-category variations
+        \begin{itemize}
+            \item Ex: Koalas have different noses
+        \end{itemize}
+    \end{itemize}
+\end{itemize}
+General Approach
+\begin{itemize}
+    \item Find a set of distinctive key-points
+    \item Define a region around each keypoint
+    \item Extract and normalize the region content
+    \item Compute a local descriptor from normalized regions
+    \item Match local descriptors
+\end{itemize}
+Common Requirements
+\begin{itemize}
+    \item Detect the same point independently in both images
+    \begin{itemize}
+        \item Particularly when taking images from different angles of the same subject
+        \item We need reliable and distinctive descriptors
+        \item Feature invariances: geometric transformations
+        \item Feature invariances: photometric transformations (i.e. lighting/color)
+    \end{itemize}
+\end{itemize}
+Introducing the Harris Corner Detector
+
+\subsection{Harris Corner Detector}
+Keypoint goals
+\begin{itemize}
+    \item Repeatable detection
+    \item Precise localization
+    \item Interesting content
+\end{itemize}
+Key properties of corners:
+\begin{itemize}
+    \item Image gradient has two or more prominent dominant directions
+    \begin{itemize}
+        \item Whereas, an edge only has intensity change in one direction
+    \end{itemize}
+    \item Repeatable and distinctive
+\end{itemize}
+Harris Detector Formulation
+\begin{itemize}
+    \item Localize patches that result in a large change of intensity when shifted in any direction
+    \item When shift by $[u,v]$, the intensity change at the center pixel is
+    \[I(x+u,y+v)\]
+    \item When we shift by $[u,v]$, the change in intensity for the ``small window" is the energy function:
+    \[E(u,v)=\sum_{x,y} w(x,y) [I(x+u,y+v)-I(x,y)]^2\]
+    \begin{itemize}
+        \item Window function: $w(x,y)$. This is either Heaviside step (1 in window, 0 outside) or Gaussian distribution. Basically multiplies everything by weights
+    \end{itemize}
+\end{itemize}
+\[E(u,v)\approx \begin{bmatrix}
+    u&v
+\end{bmatrix}M\begin{bmatrix}
+    u\\v
+\end{bmatrix}\]
+where $M$ (second-moment autocorrelation matrix) is:
+\[M=\sum_{x,y}w(x,y)\begin{bmatrix}
+    I_x^2&I_xI_y\\I_xI_y&I_y^2
+\end{bmatrix}\]
+Since $M=\sum_{x,y}w(x,y)\begin{bmatrix}
+    I_x^2&I_xI_y\\I_xI_y&I_y^2
+\end{bmatrix}$ is symmetric, we can rewrite $M=R^{-1}\begin{bmatrix}
+    \lambda_1 &0\\0&\lambda_2
+\end{bmatrix}R$
+Note on eigenpairs
+\begin{itemize}
+    \item The matrix diagonalization helps denote the two dominant directions with strongest change
+\end{itemize}
+Cases of interpreting eigenvalues
+\begin{itemize}
+    \item If one is large and other is small: edge
+    \item If both are large: corner
+    \item If both are small: ``flat" region (none)
+\end{itemize}
+This computation is done thorough the Corner Response Function
+\[\theta=det(M)-\alpha trace(M)^2=\lambda_1\lambda_2-\alpha(\lambda_1+\lambda_2)^2\]
+\begin{itemize}
+    \item The fast approximation avoids computing the eigenvalues, which requires the expensive matrix diagonalization
+    \item Note: $\alpha$ is a constant (0.04 to 0.06)
+    \item $\theta<0$: Edge
+    \item $\theta>0$: Corner
+    \item $\theta\approx 0$: ``Flat" region
+\end{itemize}
+Window Function
+\begin{itemize}
+    \item Option 1: uniform window
+    \[M=\sum_{x,y}w(x,y)\begin{bmatrix}
+    I_x^2&I_xI_y\\I_xI_y&I_y^2
+\end{bmatrix}\]
+    \begin{itemize}
+        \item Flaw, sensitive to rotation
+    \end{itemize}
+    \item Option 2: gaussian smoothing
+    \[M= g(\sigma)*\sum_{x,y}w(x,y)\begin{bmatrix}
+    I_x^2&I_xI_y\\I_xI_y&I_y^2
+\end{bmatrix}\]
+    \begin{itemize}
+        \item Better, used by Harris detector
+    \end{itemize}
+\end{itemize}
+Harris Detector
+\begin{itemize}
+    \item Compute second moment matrix (autocorrelation matrix)
+    \[M(\sigma_1, \sigma_D)= g(\sigma_1)*\sum_{x,y}w(x,y)\begin{bmatrix}
+    I_x(\sigma_D)^2&I_xI_y(\sigma_D)\\I_xI_y(\sigma_D)&I_y^2(\sigma_D)
+    \end{bmatrix}\]
+    \begin{itemize}
+        \item $\sigma_D$: Gaussian in derivative calculation
+        \item Gaussian in windowing function
+    \end{itemize}
+    \item Cornerness function/Corner response function, pull two strong eigenvalues
+    \[\theta=det(M)-\alpha trace(M)^2=\lambda_1\lambda_2-\alpha(\lambda_1+\lambda_2)^2\]
+    \begin{itemize}
+        \item Take only the local maxima of $\theta$, where $\theta > $ threshold
+    \end{itemize}
+    \item Perform non-maximum suppression
+    \begin{itemize}
+        \item For each pixel that survived threshold, we only keep it if it's the largest in its neighborhood
+    \end{itemize}
+\end{itemize}
+Harris Detector corner properties
+\begin{itemize}
+    \item Translation invariant
+    \item Rotation invariant
+    \begin{itemize}
+        \item Corner response score is invariant to image rotation since it is decided by the eigenvalues, which are unaffected by rotation
+    \end{itemize}
+    \item NOT scale invariant
+    \begin{itemize}
+        \item SIFT detector (to be covered later) is scale invariant
+    \end{itemize}
+\end{itemize}
+Scale invariant detection: How do we choose region sizes independently in each image?
+\begin{itemize}
+    \item Goal: design a function which is ``scale invariant"
+    \begin{itemize}
+        \item Ex: average intensity
+    \end{itemize}
+    \item Common approach to choose scale: take a local maximum of this function, dependent on IV region size
+    \item Covariant with image scale
+    \item What is a ``good" function for scale selection?
+    \begin{itemize}
+        \item One stable peak
+    \end{itemize}
+\end{itemize}
+Kernel choices for scale invariant detection
+\begin{itemize}
+    \item Use function $f=$ kernel $ * $ image
+    \item Choices
+    \begin{itemize}
+        \item Laplacian
+        \[L=\sigma^2\left(G_{xx}(x,y,\sigma) + G_{yy}(x,y,\sigma)\right)\]
+        \begin{itemize}
+            \item Detects blobs (good features): a locally bright or dark spot
+        \end{itemize}
+        \item Difference of Gaussians (as in gaussian/normal distribution)
+        \[DoG=G(x,y,k\sigma)-G(x,y,\sigma)\]
+        \begin{itemize}
+            \item $k$ is a parameter since higher variance means looking at a larger window (larger window size minus smaller window size)
+            \item $k\in \mathbb R^+$
+            \item Of note: computationally cheaper than Laplacian
+        \end{itemize}
+        where
+        \[G(x,y,\sigma)=\frac{1}{2\pi\sigma}e^{-\frac{x^2+y^2}{2\sigma^2}}\]
+    \end{itemize}
+\end{itemize}
+Scale Invariant Detectors
+\begin{itemize}
+    \item Finding keypoints using DoG
+    \begin{itemize}
+        \item Find local maximum of:
+        \begin{itemize}
+            \item Difference of Gaussians in space and scale
+            \item Subtract differences between adjacent Gaussians, with consecutive Gaussians scaled by scalar multiplier $k$
+        \end{itemize}
+    \end{itemize}
+    \item Summary: we want to find a keypoint that is scale and rotation-invariant
+    \begin{itemize}
+        \item Build a Gaussian pyramid
+        \item Take DoG
+        \item Keep 3D extrema in $(x,y,\sigma)\to (x,y)$ is keypoint location and $\sigma$ is the true scale 
+    \end{itemize}
+\end{itemize}
+Local Features and Descriptors
+\begin{itemize}
+    \item How to describe points for matching?
+    \item Invariant to transformations (rotation, translation, scale, etc.) and distinctive
+\end{itemize}

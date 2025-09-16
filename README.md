@@ -1,5 +1,3 @@
-# CS 350
+# CS 485
 
-Emory CS 350: Systems Programming
-
-Ken Mandelberg
+Emory CS 485/585: Computer Vision
